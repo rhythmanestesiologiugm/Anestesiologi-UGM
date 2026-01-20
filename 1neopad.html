@@ -137,7 +137,7 @@
                 <label>Hb Awal (g/dL)</label>
                 <input type="number" id="hbInit" step="0.1" placeholder="ex: 12" oninput="calculate()">
             </div>
-            </div>
+        </div>
 
         <div class="pbw-box">
             <div class="result-row" style="border:none;">
@@ -177,9 +177,9 @@
         <div class="section-header">CAIRAN & DARAH</div>
         <div class="result-row"><span class="result-label">EBV Factor</span><span id="resEBVFactor" class="result-value">-</span></div>
         <div class="result-row"><span class="result-label">EBV (Estimated Blood Vol)</span><span id="resEBV" class="result-value">-</span></div>
-        
+        <div class="sub-header" style="width:100%; border-bottom:1px solid #eee; margin-bottom:5px;">MABL (Max Allowable Blood Loss)</div>
         <div id="ablSection"></div>
-        <div style="font-size: 0.75em; color: #7f8c8d; margin-top:2px; text-align:right; width:100%; display:block;">Formula: EBV × (Hb Init - Hb Thr) / Hb Init</div>
+        <div style="font-size: 0.75em; color: #7f8c8d; margin-top:5px; text-align:right; width:100%; display:block;">Formula: EBV × (Hb Init - Hb Thr) / Hb Init</div>
         
         <div class="sub-header">Fluid Management</div>
         <div class="result-row"><span class="result-label">Maintenance (4-2-1)</span><span id="resMaint" class="result-value">-</span></div>
@@ -397,7 +397,7 @@
         if (!hasWeight) {
             document.getElementById('resEBVFactor').innerText = "-";
             document.getElementById('resEBV').innerText = "-";
-            document.getElementById('ablSection').innerHTML = ""; // Clear ABL section
+            document.getElementById('ablSection').innerHTML = "";
             document.getElementById('resMaint').innerText = "-";
             document.getElementById('resKC1').innerText = "-";
             document.getElementById('resKC2').innerText = "-";
@@ -411,13 +411,10 @@
             return;
         }
 
-        // --- NEW EBV LOGIC ---
-        let ebvFactor = 75; 
-        
+        let ebvFactor = 75;
         if (valAgeY === 0 && valAgeM === 0) {
-            // Age input is 0 (Neonate)
             ebvFactor = 90;
-        } else if (totalMonths < 1) { 
+        } else if (totalMonths < 1) {
             ebvFactor = 85; 
         } else if (totalMonths < 12) {
             ebvFactor = 80;
@@ -425,51 +422,43 @@
             ebvFactor = 65;
         }
         
-        document.getElementById('resEBVFactor').innerText = ebvFactor + " ml/kgBB";
+        document.getElementById('resEBVFactor').innerText = ebvFactor + " ml/kg";
 
         let ebv = weight * ebvFactor;
         document.getElementById('resEBV').innerText = ebv.toFixed(0) + " ml";
         
-        // --- NEW AUTOMATIC ABL CALCULATION ---
+        // ABL Calculation Loop
         let ablHtml = "";
-        
         if (hbInit > 0) {
-            // Defined thresholds
-            let thresholds = [
-                { hb: 10, hct: "30%" },
-                { hb: 9, hct: "27%" },
-                { hb: 8, hct: "24%" },
-                { hb: 7, hct: "21%" },
-                { hb: 6, hct: "18%" }
+            const ablTargets = [
+                { hb: 10, label: "Hb 10 = 30% hct" },
+                { hb: 9, label: "Hb 9 = 27% hct" },
+                { hb: 8, label: "Hb 8 = 24% hct" },
+                { hb: 7, label: "Hb 7 = 21% hct" },
+                { hb: 6, label: "Hb 6 = 18% hct" }
             ];
-            
-            // Loop for fixed Hb values
-            thresholds.forEach(t => {
+
+            ablTargets.forEach(t => {
+                let val = 0;
                 if (hbInit > t.hb) {
-                    let abl = (ebv * (hbInit - t.hb)) / hbInit;
-                    ablHtml += `<div class="result-row"><span class="result-label">Hb ${t.hb} (${t.hct} Hct)</span><span class="result-value">${abl.toFixed(0)} ml</span></div>`;
+                    val = (ebv * (hbInit - t.hb)) / hbInit;
+                    ablHtml += `<div class="result-row"><span class="result-label">${t.label}</span><span class="result-value">${val.toFixed(0)} ml</span></div>`;
                 } else {
-                    ablHtml += `<div class="result-row"><span class="result-label">Hb ${t.hb} (${t.hct} Hct)</span><span class="result-value">-</span></div>`;
+                     ablHtml += `<div class="result-row"><span class="result-label">${t.label}</span><span class="result-value">-</span></div>`;
                 }
             });
-
-            // Loop for Deltas (Percentage Drops)
-            // Delta 15%
-            let delta15Loss = (ebv * 0.15).toFixed(0);
-            let hbDelta15 = (hbInit * 0.85).toFixed(1);
-            ablHtml += `<div class="result-row"><span class="result-label">Delta Hb/Hct 15% (Target Hb ${hbDelta15})</span><span class="result-value">${delta15Loss} ml</span></div>`;
-
-            // Delta 30%
-            let delta30Loss = (ebv * 0.30).toFixed(0);
-            let hbDelta30 = (hbInit * 0.70).toFixed(1);
-            ablHtml += `<div class="result-row"><span class="result-label">Delta Hb/Hct 30% (Target Hb ${hbDelta30})</span><span class="result-value">${delta30Loss} ml</span></div>`;
+            
+            // Deltas
+            let d15 = ebv * 0.15;
+            ablHtml += `<div class="result-row"><span class="result-label">Delta Hb or hct 15%</span><span class="result-value">${d15.toFixed(0)} ml</span></div>`;
+            
+            let d30 = ebv * 0.30;
+            ablHtml += `<div class="result-row"><span class="result-label">Delta Hb or hct 30%</span><span class="result-value">${d30.toFixed(0)} ml</span></div>`;
             
         } else {
-             ablHtml = `<div class="result-row" style="color:#aaa; font-style:italic; justify-content:center;">Masukkan Hb Awal</div>`;
+            ablHtml = `<div class="result-row" style="color:#e67e22; justify-content:center; text-align:center;">Masukkan Hb Awal</div>`;
         }
-
         document.getElementById('ablSection').innerHTML = ablHtml;
-        // -------------------------------------
 
         let maint = 0;
         if (weight <= 10) maint = weight * 4;

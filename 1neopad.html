@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neopad Pediatric Calculator</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --light: #ecf0f1;
+            --border: #bdc3c7;
+            --secondary-text: #e67e22;
+            --age-text: #7f8c8d;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f7f6;
+            color: #333;
+            font-size: 14px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { 
+            color: var(--primary);
+            margin-top: 0;
+            font-size: 1.5rem; 
+            text-align: center; 
+            margin-bottom: 5px; 
+        }
+        .brand { 
+            font-size: 0.8rem; 
+            color: #7f8c8d; 
+            text-align: center; 
+            display: block; 
+            margin-bottom: 20px; 
+        }
+        
+        .input-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            padding: 15px;
+            background-color: var(--light);
+            border-radius: 6px;
+            margin-bottom: 20px;
+            margin-top: 20px;
+        }
+        .input-wrapper { display: flex; flex-direction: column; }
+        label { font-weight: 600; margin-bottom: 5px; font-size: 0.85rem; }
+        input, select { padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 1rem; }
+        input:focus { border-color: var(--accent); outline: none; }
+
+        .section-header {
+            background-color: var(--primary);
+            color: white;
+            padding: 8px 12px;
+            margin: 20px 0 10px 0;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .result-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid #eee; }
+        .result-label { color: #555; font-weight: 500; flex: 1; padding-top: 2px; }
+        .result-value { font-weight: 700; color: var(--primary); text-align: right; line-height: 1.4; flex: 1.5; display: flex; flex-direction: column; align-items: flex-end; }
+        .sub-header { font-weight: bold; color: var(--accent); margin-top: 10px; border-bottom: 2px solid var(--accent); display: inline-block; }
+        
+        /* Dual Calculation Styling */
+        .calc-weight { color: var(--primary); }
+        .calc-age { font-size: 0.9em; color: var(--secondary-text); font-weight: 600; }
+        .calc-label { font-size: 0.75em; color: #95a5a6; text-transform: uppercase; margin-right: 4px; font-weight: normal; }
+        .color-text { font-weight: 900; text-shadow: 0 0 1px rgba(0,0,0,0.1); }
+
+        .pbw-box { background: #e8f6f3; padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid #a3e4d7; }
+
+        @media (max-width: 600px) {
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Neopad Anestesi UGM</h1>
+    <span class="brand"> </span>
+
+    <div id="calculatorWrapper">
+        <div class="input-group">
+            <div class="input-wrapper">
+                <label>Usia (Tahun)</label>
+                <input type="number" id="ageYear" min="0" placeholder="0" oninput="calculate()">
+            </div>
+            <div class="input-wrapper">
+                <label>Usia (Bulan)</label>
+                <input type="number" id="ageMonth" min="0" max="11" placeholder="0" oninput="calculate()">
+            </div>
+            <div class="input-wrapper">
+                <label>Berat Badan (kg)</label>
+                <input type="number" id="weight" step="0.1" placeholder="kg" oninput="calculate()">
+            </div>
+            <div class="input-wrapper">
+                <label>Tinggi Badan (cm)</label>
+                <input type="number" id="height" placeholder="cm" oninput="calculate()">
+            </div>
+            <div class="input-wrapper">
+                <label>Gender</label>
+                <select id="gender" onchange="calculate()">
+                    <option value="male">Laki-laki</option>
+                    <option value="female">Perempuan</option>
+                </select>
+            </div>
+            <div class="input-wrapper">
+                <label>Lama Puasa (Jam)</label>
+                <input type="number" id="fasting" value="6" oninput="calculate()">
+            </div>
+            <div class="input-wrapper">
+                <label>Stress Operasi</label>
+                <select id="stress" onchange="calculate()">
+                    <option value="2">Noninvasive (2 ml/kg)</option>
+                    <option value="4" selected>Mildly invasive (4 ml/kg)</option>
+                    <option value="8">Moderately invasive (8 ml/kg)</option>
+                    <option value="10">Significantly invasive (≥10 ml/kg)</option>
+                </select>
+            </div>
+            <div class="input-wrapper">
+                <label>Hb Awal (g/dL)</label>
+                <input type="number" id="hbInit" step="0.1" placeholder="ex: 12" oninput="calculate()">
+            </div>
+            </div>
+
+        <div class="pbw-box">
+            <div class="result-row" style="border:none;">
+                <span class="result-label">Predicted Body Weight for ADULTS (PBW)</span>
+                <span id="resPBW" class="result-value">-</span>
+            </div>
+            <div class="result-row" style="border:none; margin-top: 5px;">
+                <span class="result-label">Predicted Weight (WHO/CDC P25-P75)</span>
+                <span id="resEstWeight" class="result-value">-</span>
+            </div>
+        </div>
+
+        <div class="section-header">DEVICE (Airway)</div>
+        <div class="grid-2">
+            <div class="result-row" style="align-items: flex-start;">
+                <span class="result-label">ETT Size</span>
+                <span id="resETT" class="result-value">-</span>
+            </div>
+            <div class="result-row"><span class="result-label">ETT Depth (cm)</span><span id="resDepth" class="result-value">-</span></div>
+            <div class="result-row"><span class="result-label">Blade</span><span id="resBlade" class="result-value">-</span></div>
+            <div class="result-row"><span class="result-label">LMA Size</span><span id="resLMA" class="result-value">-</span></div>
+            <div class="result-row"><span class="result-label">Mask Type</span><span id="resMask" class="result-value">-</span></div>
+            <div class="result-row"><span class="result-label">Oral Airway (Guedel)</span><span id="resOPA" class="result-value">-</span></div>
+        </div>
+
+        <div class="section-header">HEMODINAMIK & RESPIRASI</div>
+        <div class="grid-2">
+            <div class="result-row"><span class="result-label">Systolic BP (TDS)</span><span id="resSBP" class="result-value">-</span></div>
+            <div class="result-row"><span class="result-label">Diastolic BP (TDD)</span><span id="resDBP" class="result-value">-</span></div>
+            <div class="result-row"><span class="result-label">MAP</span><span id="resMAP" class="result-value">-</span></div>
+            <div class="result-row"><span class="result-label">Heart Rate (HR)</span><span id="resHR" class="result-value">-</span></div>
+            <div class="result-row"><span class="result-label">Resp. Rate (RR)</span><span id="resRR" class="result-value">-</span></div>
+            <div class="result-row"><span class="result-label">Tidal Volume (VT)</span><span id="resVT" class="result-value">-</span></div>
+            <div class="result-row"><span class="result-label">Minute Vol (MV)</span><span id="resMV" class="result-value">-</span></div>
+        </div>
+
+        <div class="section-header">CAIRAN & DARAH</div>
+        <div class="result-row"><span class="result-label">EBV Factor</span><span id="resEBVFactor" class="result-value">-</span></div>
+        <div class="result-row"><span class="result-label">EBV (Estimated Blood Vol)</span><span id="resEBV" class="result-value">-</span></div>
+        
+        <div id="ablList"></div>
+        <div style="font-size: 0.75em; color: #7f8c8d; margin-top:5px; text-align:right; width:100%; display:block;">Formula: EBV × (Hb Init - Hb Thr) / Hb Init</div>
+        
+        <div class="sub-header">Fluid Management</div>
+        <div class="result-row"><span class="result-label">Maintenance (4-2-1)</span><span id="resMaint" class="result-value">-</span></div>
+        <div class="result-row"><span class="result-label">Replacement (REL)</span><span id="resREL" class="result-value">Sesuai klinis</span></div>
+        <div class="result-row"><span class="result-label">KC 1 (Jam 1: M + O + 1/2 Defisit)</span><span id="resKC1" class="result-value">-</span></div>
+        <div class="result-row"><span class="result-label">KC 2-3 (Jam 2/3: M + O + 1/4 Defisit)</span><span id="resKC2" class="result-value">-</span></div>
+        <div class="result-row"><span class="result-label">KC 4 (Jam 4: M + O)</span><span id="resKC4" class="result-value">-</span></div>
+        
+        <div class="section-header">MEDICATION (KALKULATOR INI TIDAK PUNYA UPPER LIMIT)</div>
+        <div id="medsList"></div>
+
+        <div class="section-header">EMERGENCY</div>
+        <div class="result-row"><span class="result-label">Epinephrine (10 mcg/kg)</span><span id="resEpi" class="result-value">-</span></div>
+        <div class="result-row"><span class="result-label">Ephedrine (0.1-0.3 mg/kg)</span><span id="resEphedrine" class="result-value">-</span></div>
+        <div class="result-row"><span class="result-label">Atropine (0.01-0.02 mg/kg)</span><span id="resAtropine" class="result-value">-</span></div>
+
+        <div class="section-header">CAUDAL</div>
+        <div class="result-row"><span class="result-label">Armitage (0.5 ml/kg)</span><span id="resArmitageLow" class="result-value">-</span></div>
+        <div class="result-row"><span class="result-label">Armitage (1.0 ml/kg)</span><span id="resArmitageHigh" class="result-value">-</span></div>
+    </div> 
+</div>
+
+<script>
+    // --- PEDIATRIC CALC LOGIC ---
+    const growthData = {
+        female: [
+            {m: 0.0, p25: 2.4, p75: 4.2}, {m: 1.0, p25: 3.2, p75: 5.5}, {m: 2.0, p25: 3.9, p75: 6.6}, {m: 3.0, p25: 4.5, p75: 7.5}, {m: 4.0, p25: 5.0, p75: 8.2}, {m: 5.0, p25: 5.4, p75: 8.8}, {m: 6.0, p25: 5.7, p75: 9.3}, {m: 7.0, p25: 6.0, p75: 9.8}, {m: 8.0, p25: 6.3, p75: 10.2}, {m: 9.0, p25: 6.5, p75: 10.5}, {m: 10.0, p25: 6.7, p75: 10.9}, {m: 11.0, p25: 6.9, p75: 11.2}, {m: 12.0, p25: 7.0, p75: 11.5}, {m: 13.0, p25: 7.2, p75: 11.8}, {m: 14.0, p25: 7.4, p75: 12.1}, {m: 15.0, p25: 7.6, p75: 12.4}, {m: 16.0, p25: 7.7, p75: 12.6}, {m: 17.0, p25: 7.9, p75: 12.9}, {m: 18.0, p25: 8.1, p75: 13.2}, {m: 19.0, p25: 8.2, p75: 13.5}, {m: 20.0, p25: 8.4, p75: 13.7}, {m: 21.0, p25: 8.6, p75: 14.0}, {m: 22.0, p25: 8.7, p75: 14.3}, {m: 23.0, p25: 8.9, p75: 14.6}, {m: 24.0, p25: 9.0, p75: 14.8}, {m: 25.0, p25: 9.2, p75: 15.1}, {m: 26.0, p25: 9.4, p75: 15.4}, {m: 27.0, p25: 9.5, p75: 15.7}, {m: 28.0, p25: 9.7, p75: 16.0}, {m: 29.0, p25: 9.8, p75: 16.2}, {m: 30.0, p25: 10.0, p75: 16.5}, {m: 31.0, p25: 10.1, p75: 16.8}, {m: 32.0, p25: 10.3, p75: 17.1}, {m: 33.0, p25: 10.4, p75: 17.3}, {m: 34.0, p25: 10.5, p75: 17.6}, {m: 35.0, p25: 10.7, p75: 17.9}, {m: 36.0, p25: 10.8, p75: 18.1}, {m: 37.0, p25: 10.9, p75: 18.4}, {m: 38.0, p25: 11.1, p75: 18.7}, {m: 39.0, p25: 11.2, p75: 19.0}, {m: 40.0, p25: 11.3, p75: 19.2}, {m: 41.0, p25: 11.5, p75: 19.5}, {m: 42.0, p25: 11.6, p75: 19.8}, {m: 43.0, p25: 11.7, p75: 20.1}, {m: 44.0, p25: 11.8, p75: 20.4}, {m: 45.0, p25: 12.0, p75: 20.7}, {m: 46.0, p25: 12.1, p75: 20.9}, {m: 47.0, p25: 12.2, p75: 21.2}, {m: 48.0, p25: 12.3, p75: 21.5}, {m: 49.0, p25: 12.4, p75: 21.8}, {m: 50.0, p25: 12.6, p75: 22.1}, {m: 51.0, p25: 12.7, p75: 22.4}, {m: 52.0, p25: 12.8, p75: 22.6}, {m: 53.0, p25: 12.9, p75: 22.9}, {m: 54.0, p25: 13.0, p75: 23.2}, {m: 55.0, p25: 13.2, p75: 23.5}, {m: 56.0, p25: 13.3, p75: 23.8}, {m: 57.0, p25: 13.4, p75: 24.1}, {m: 58.0, p25: 13.5, p75: 24.4}, {m: 59.0, p25: 13.6, p75: 24.6}, {m: 60.0, p25: 13.7, p75: 24.9}, {m: 72.5, p25: 18.499, p75: 22.663}, {m: 84.5, p25: 20.672, p75: 25.675}, {m: 96.5, p25: 23.094, p75: 29.170}, {m: 108.5, p25: 25.902, p75: 33.294}, {m: 120.5, p25: 29.171, p75: 38.039}, {m: 132.5, p25: 32.852, p75: 43.187}, {m: 144.5, p25: 36.750, p75: 48.334}, {m: 156.5, p25: 40.556, p75: 52.997}, {m: 168.5, p25: 43.940, p75: 56.764}, {m: 180.5, p25: 46.654, p75: 59.444}, {m: 192.5, p25: 48.620, p75: 61.162}, {m: 204.5, p25: 49.959, p75: 62.328}, {m: 216.5, p25: 50.950, p75: 63.443}, {m: 228.5, p25: 51.847, p75: 64.778}
+        ],
+        male: [
+            {m: 0.0, p25: 2.5, p75: 4.4}, {m: 1.0, p25: 3.4, p75: 5.8}, {m: 2.0, p25: 4.3, p75: 7.1}, {m: 3.0, p25: 5.0, p75: 8.0}, {m: 4.0, p25: 5.6, p75: 8.7}, {m: 5.0, p25: 6.0, p75: 9.3}, {m: 6.0, p25: 6.4, p75: 9.8}, {m: 7.0, p25: 6.7, p75: 10.3}, {m: 8.0, p25: 6.9, p75: 10.7}, {m: 9.0, p25: 7.1, p75: 11.0}, {m: 10.0, p25: 7.4, p75: 11.4}, {m: 11.0, p25: 7.6, p75: 11.7}, {m: 12.0, p25: 7.7, p75: 12.0}, {m: 13.0, p25: 7.9, p75: 12.3}, {m: 14.0, p25: 8.1, p75: 12.6}, {m: 15.0, p25: 8.3, p75: 12.8}, {m: 16.0, p25: 8.4, p75: 13.1}, {m: 17.0, p25: 8.6, p75: 13.4}, {m: 18.0, p25: 8.8, p75: 13.7}, {m: 19.0, p25: 8.9, p75: 13.9}, {m: 20.0, p25: 9.1, p75: 14.2}, {m: 21.0, p25: 9.2, p75: 14.5}, {m: 22.0, p25: 9.4, p75: 14.7}, {m: 23.0, p25: 9.5, p75: 15.0}, {m: 24.0, p25: 9.7, p75: 15.3}, {m: 25.0, p25: 9.8, p75: 15.5}, {m: 26.0, p25: 10.0, p75: 15.8}, {m: 27.0, p25: 10.1, p75: 16.1}, {m: 28.0, p25: 10.2, p75: 16.3}, {m: 29.0, p25: 10.4, p75: 16.6}, {m: 30.0, p25: 10.5, p75: 16.9}, {m: 31.0, p25: 10.7, p75: 17.1}, {m: 32.0, p25: 10.8, p75: 17.4}, {m: 33.0, p25: 10.9, p75: 17.6}, {m: 34.0, p25: 11.0, p75: 17.8}, {m: 35.0, p25: 11.2, p75: 18.1}, {m: 36.0, p25: 11.3, p75: 18.3}, {m: 37.0, p25: 11.4, p75: 18.6}, {m: 38.0, p25: 11.5, p75: 18.8}, {m: 39.0, p25: 11.6, p75: 19.0}, {m: 40.0, p25: 11.8, p75: 19.3}, {m: 41.0, p25: 11.9, p75: 19.5}, {m: 42.0, p25: 12.0, p75: 19.7}, {m: 43.0, p25: 12.1, p75: 20.0}, {m: 44.0, p25: 12.2, p75: 20.2}, {m: 45.0, p25: 12.4, p75: 20.5}, {m: 46.0, p25: 12.5, p75: 20.7}, {m: 47.0, p25: 12.6, p75: 20.9}, {m: 48.0, p25: 12.7, p75: 21.2}, {m: 49.0, p25: 12.8, p75: 21.4}, {m: 50.0, p25: 12.9, p75: 21.7}, {m: 51.0, p25: 13.1, p75: 21.9}, {m: 52.0, p25: 13.2, p75: 22.2}, {m: 53.0, p25: 13.3, p75: 22.4}, {m: 54.0, p25: 13.4, p75: 22.7}, {m: 55.0, p25: 13.5, p75: 22.9}, {m: 56.0, p25: 13.6, p75: 23.2}, {m: 57.0, p25: 13.7, p75: 23.4}, {m: 58.0, p25: 13.8, p75: 23.7}, {m: 59.0, p25: 14.0, p75: 23.9}, {m: 60.0, p25: 14.1, p75: 24.2}, {m: 72.5, p25: 19.001, p75: 22.940}, {m: 84.5, p25: 21.095, p75: 25.759}, {m: 96.5, p25: 23.340, p75: 28.847}, {m: 108.5, p25: 25.830, p75: 32.397}, {m: 120.5, p25: 28.669, p75: 36.559}, {m: 132.5, p25: 31.979, p75: 41.384}, {m: 144.5, p25: 35.868, p75: 46.813}, {m: 156.5, p25: 40.556, p75: 52.997}, {m: 168.5, p25: 43.940, p75: 56.764}, {m: 180.5, p25: 46.654, p75: 59.444}, {m: 192.5, p25: 48.620, p75: 61.162}, {m: 204.5, p25: 49.959, p75: 62.328}, {m: 216.5, p25: 50.950, p75: 63.443}, {m: 228.5, p25: 62.457, p75: 77.586}
+        ]
+    };
+
+    const AIRWAY_BY_WEIGHT = [
+        { min: -1, max: 1, ett: "2.5u", depth: "7cm", blade: "Miller 0", lma: "1", mask: "neonate", opaSize: "00", opaMm: "40", opaColor: "Pink" },
+        { min: 1, max: 2, ett: "3.0u", depth: "8cm", blade: "Miller 0", lma: "1", mask: "neonate", opaSize: "00", opaMm: "40", opaColor: "Pink" },
+        { min: 2, max: 3, ett: "3c/3.5u", depth: "9cm", blade: "Miller 0-1", lma: "1", mask: "neonate", opaSize: "00", opaMm: "40", opaColor: "Pink" },
+        { min: 3, max: 4, ett: "3c/3.5u", depth: "10cm", blade: "Miller 0-1", lma: "1", mask: "infant", opaSize: "1", opaMm: "60", opaColor: "Black" },
+        { min: 4, max: 6, ett: "3c/3.5", depth: "12cm", blade: "Miller 1/Wis 1.5", lma: "1-1.5", mask: "infant", opaSize: "1", opaMm: "60", opaColor: "Black" },
+        { min: 6, max: 10, ett: "3.5c/4u", depth: "13cm", blade: "Wis 1.5", lma: "1.5", mask: "toddler", opaSize: "0", opaMm: "50", opaColor: "Lt Blue" },
+        { min: 10, max: 12, ett: "4-4.5c", depth: "14cm", blade: "Wis 1.5", lma: "2", mask: "toddler", opaSize: "1", opaMm: "60", opaColor: "Black" },
+        { min: 12, max: 16, ett: "4.5c", depth: "15cm", blade: "Wis 1.5/Mac 2", lma: "2", mask: "child/bubble gum", opaSize: "1", opaMm: "60", opaColor: "Black" },
+        { min: 16, max: 20, ett: "4.5-5c", depth: "16cm", blade: "Miller 2/Mac 2", lma: "2", mask: "bubble gum", opaSize: "1-2", opaMm: "60-70", opaColor: "Black/White" },
+        { min: 20, max: 30, ett: "5-5.5c", depth: "17cm", blade: "Miller 2/Mac 2", lma: "2.5", mask: "bubble gum", opaSize: "2-3", opaMm: "70-80", opaColor: "White/Green" },
+        { min: 30, max: 45, ett: "5.5-6c", depth: "18cm", blade: "Miller/Mac 2-3", lma: "3", mask: "small adult", opaSize: "3", opaMm: "80", opaColor: "Green" },
+        { min: 45, max: 9999, ett: "6.5-7c", depth: "20-22", blade: "Miller/Mac 2-3", lma: "4", mask: "med/large adult", opaSize: "3-4", opaMm: "80-90", opaColor: "Green/Yellow" }
+    ];
+
+    const AIRWAY_BY_AGE = [
+        { min: 0.083, max: 0.5, ett: "3c/3.5", depth: "12cm", blade: "Miller 1/Wis 1.5", lma: "1-1.5", mask: "infant", opaSize: "1", opaMm: "60", opaColor: "Black" },
+        { min: 0.5, max: 1, ett: "3.5c/4u", depth: "13cm", blade: "Wis 1.5", lma: "1.5", mask: "toddler", opaSize: "0", opaMm: "50", opaColor: "Lt Blue" },
+        { min: 1, max: 2, ett: "4-4.5c", depth: "14cm", blade: "Wis 1.5", lma: "2", mask: "toddler", opaSize: "1", opaMm: "60", opaColor: "Black" },
+        { min: 2, max: 4, ett: "4.5c", depth: "15cm", blade: "Wis 1.5/Mac 2", lma: "2", mask: "child/bubble gum", opaSize: "1", opaMm: "60", opaColor: "Black" },
+        { min: 4, max: 6, ett: "4.5-5c", depth: "16cm", blade: "Miller 2/Mac 2", lma: "2", mask: "bubble gum", opaSize: "1-2", opaMm: "60-70", opaColor: "Black/White" },
+        { min: 6, max: 8, ett: "5-5.5c", depth: "17cm", blade: "Miller 2/Mac 2", lma: "2.5", mask: "bubble gum", opaSize: "2-3", opaMm: "70-80", opaColor: "White/Green" },
+        { min: 8, max: 12, ett: "5.5-6c", depth: "18cm", blade: "Miller/Mac 2-3", lma: "3", mask: "small adult", opaSize: "3", opaMm: "80", opaColor: "Green" },
+        { min: 12, max: 999, ett: "6.5-7c", depth: "20-22", blade: "Miller/Mac 2-3", lma: "4", mask: "med/large adult", opaSize: "3-4", opaMm: "80-90", opaColor: "Green/Yellow" }
+    ];
+
+    function getWeightRange(gender, ageMonths) {
+        if (!growthData[gender]) return "-";
+        const data = growthData[gender];
+        const closest = data.reduce((prev, curr) => {
+            return (Math.abs(curr.m - ageMonths) < Math.abs(prev.m - ageMonths) ? curr : prev);
+        });
+        return `${closest.p25.toFixed(1)} - ${closest.p75.toFixed(1)} kg`;
+    }
+
+    function getAirwayData(value, dataset) {
+        if (value === null || isNaN(value)) return null;
+        for (let row of dataset) {
+            if (value >= row.min && value < row.max) {
+                return row;
+            }
+        }
+        return null;
+    }
+
+    function formatColorText(colorStr) {
+        if (!colorStr) return "";
+        const colorMap = {
+            "Black": "#000000",
+            "White": "#7f8c8d", 
+            "Pink": "#E91E63",
+            "Lt Blue": "#00BFFF", 
+            "Green": "#2ecc71",
+            "Yellow": "#f1c40f",
+            "Orange": "#e67e22",
+            "Red": "#e74c3c",
+            "Purple": "#9b59b6",
+            "Blue": "#3498db"
+        };
+        const parts = colorStr.split('/');
+        return parts.map(part => {
+            let cCode = colorMap[part.trim()] || "#000";
+            return `<span class="color-text" style="color:${cCode}">${part}</span>`;
+        }).join('/');
+    }
+
+    function calculate() {
+        let ageY = parseFloat(document.getElementById('ageYear').value);
+        let ageM = parseFloat(document.getElementById('ageMonth').value);
+        let weight = parseFloat(document.getElementById('weight').value);
+        let height = parseFloat(document.getElementById('height').value);
+        let gender = document.getElementById('gender').value;
+        let fasting = parseFloat(document.getElementById('fasting').value) || 0;
+        let stress = parseFloat(document.getElementById('stress').value) || 0;
+        let hbInit = parseFloat(document.getElementById('hbInit').value) || 0;
+
+        let hasWeight = !isNaN(weight);
+        let hasAge = !isNaN(ageY) || !isNaN(ageM);
+
+        let valAgeY = (isNaN(ageY) ? 0 : ageY);
+        let valAgeM = (isNaN(ageM) ? 0 : ageM);
+        let totalMonths = (valAgeY * 12) + valAgeM;
+        let totalYears = valAgeY + (valAgeM / 12);
+
+        let estWDisplay = getWeightRange(gender, totalMonths);
+        document.getElementById('resEstWeight').innerText = estWDisplay;
+
+        let pbw = 0;
+        if (height > 0) {
+            let base = gender === 'male' ? 50 : 45.5;
+            pbw = base + 0.91 * (height - 152.4);
+            document.getElementById('resPBW').innerText = pbw.toFixed(1) + " kg";
+        } else {
+            document.getElementById('resPBW').innerText = "-";
+        }
+
+        let wData = hasWeight ? getAirwayData(weight, AIRWAY_BY_WEIGHT) : null;
+        let aData = hasAge ? getAirwayData(totalYears, AIRWAY_BY_AGE) : null;
+
+        function renderDual(key) {
+            let wVal = wData ? wData[key] : "-";
+            let aVal = aData ? aData[key] : "-";
+            return `
+                <span class="calc-weight"><span class="calc-label">Wt</span> ${wVal}</span>
+                <span class="calc-age"><span class="calc-label">Age</span> ${aVal}</span>
+            `;
+        }
+
+        let ettHtml = "";
+        let wEtt = wData ? wData.ett : "-";
+        let aEtt = aData ? aData.ett : "-";
+        ettHtml += `<span class="calc-weight"><span class="calc-label">Tab(Wt)</span> ${wEtt}</span>`;
+        ettHtml += `<span class="calc-age"><span class="calc-label">Tab(Age)</span> ${aEtt}</span>`;
+
+        if (totalYears > 0 && totalYears <= 8) {
+            let duracherVal = (totalYears / 4) + 3.5;
+            let coleVal = (totalYears / 4) + 4;
+            ettHtml += `<span style="color:#27ae60; font-size:0.9em; margin-top:3px; border-top:1px dashed #eee; padding-top:2px; width:100%; text-align:right;">
+                            <span class="calc-label">Duracher (Cuff)</span> ${duracherVal.toFixed(1)}
+                        </span>`;
+            ettHtml += `<span style="color:#d35400; font-size:0.9em;">
+                            <span class="calc-label">Cole (Uncuff)</span> ${coleVal.toFixed(1)}
+                        </span>`;
+        } else if (totalYears > 8) {
+             ettHtml += `<span style="color:#95a5a6; font-size:0.8em; margin-top:2px; border-top:1px dashed #eee; padding-top:2px; width:100%; text-align:right;">(Formulas Max 8yr)</span>`;
+        }
+        document.getElementById('resETT').innerHTML = ettHtml;
+
+        document.getElementById('resDepth').innerHTML = renderDual('depth');
+        document.getElementById('resBlade').innerHTML = renderDual('blade');
+        document.getElementById('resLMA').innerHTML = renderDual('lma');
+        document.getElementById('resMask').innerHTML = renderDual('mask');
+        
+        function renderOPA() {
+            let wVal = "-";
+            if (wData) {
+                wVal = `${wData.opaSize}, ${wData.opaMm}mm, ${formatColorText(wData.opaColor)}`;
+            }
+            let aVal = "-";
+            if (aData) {
+                aVal = `${aData.opaSize}, ${aData.opaMm}mm, ${formatColorText(aData.opaColor)}`;
+            }
+            return `
+                <span class="calc-weight"><span class="calc-label">Wt</span> ${wVal}</span>
+                <span class="calc-age"><span class="calc-label">Age</span> ${aVal}</span>
+            `;
+        }
+        document.getElementById('resOPA').innerHTML = renderOPA();
+
+        let hr = "", sbp = "", dbp = "", rr = "", map = "";
+        let vt = "";
+        let mv = "-";
+
+        if (hasWeight) {
+            vt = (6 * weight).toFixed(0) + " - " + (8 * weight).toFixed(0) + " ml";
+            let mvCalc = 100 * weight; 
+            mv = mvCalc.toFixed(0) + " cc/min";
+        }
+
+        if (totalMonths < 1) { 
+            hr = "120 - 170"; sbp = "40 - 60"; map = "30s"; rr = "50 - 60";
+        } else if (totalMonths <= 3) {
+            hr = "100 - 150"; sbp = "65 - 85"; map = "45 - 60"; rr = "30 - 60";
+        } else if (totalMonths <= 12) {
+            hr = "80 - 120"; sbp = "80 - 100"; map = "60s"; rr = "22 - 30";
+        } else if (totalYears <= 3) {
+            hr = "70 - 110"; sbp = "70 - 100"; map = "50 - 60"; rr = "18 - 24";
+        } else if (totalYears <= 6) {
+            hr = "65 - 110"; sbp = "80 - 110"; map = "55 - 70"; rr = "16 - 22";
+        } else {
+            hr = "60 - 95"; sbp = "80 - 120"; map = "60 - 80"; rr = "12 - 20";
+        }
+
+        document.getElementById('resHR').innerText = hr;
+        document.getElementById('resSBP').innerText = sbp;
+        document.getElementById('resDBP').innerText = dbp || "-"; 
+        document.getElementById('resMAP').innerText = map;
+        document.getElementById('resRR').innerText = rr;
+        document.getElementById('resVT').innerText = vt;
+        document.getElementById('resMV').innerText = mv;
+
+        if (!hasWeight) {
+            document.getElementById('resEBVFactor').innerText = "-";
+            document.getElementById('resEBV').innerText = "-";
+            document.getElementById('ablList').innerHTML = "";
+            document.getElementById('resMaint').innerText = "-";
+            document.getElementById('resKC1').innerText = "-";
+            document.getElementById('resKC2').innerText = "-";
+            document.getElementById('resKC4').innerText = "-";
+            document.getElementById('medsList').innerHTML = "";
+            document.getElementById('resEpi').innerText = "-";
+            document.getElementById('resEphedrine').innerText = "-";
+            document.getElementById('resAtropine').innerText = "-";
+            document.getElementById('resArmitageLow').innerText = "-";
+            document.getElementById('resArmitageHigh').innerText = "-";
+            return;
+        }
+
+        let ebvFactor = 75; 
+        if (totalMonths === 0) ebvFactor = 90;
+        else if (totalMonths < 1) ebvFactor = 85; 
+        else if (totalMonths < 12) ebvFactor = 80;
+        else if (gender === 'female' && totalYears > 12) ebvFactor = 65;
+        
+        document.getElementById('resEBVFactor').innerText = ebvFactor + " ml/kg";
+
+        let ebv = weight * ebvFactor;
+        document.getElementById('resEBV').innerText = ebv.toFixed(0) + " ml";
+        
+        let ablHtml = "";
+        if (hbInit > 0) {
+            let targets = [10, 9, 8, 7, 6];
+            targets.forEach(t => {
+                if (hbInit > t) {
+                    let val = (ebv * (hbInit - t)) / hbInit;
+                    ablHtml += `<div class="result-row"><span class="result-label">MABL (Acceptable Hb ${t})</span><span class="result-value">${val.toFixed(0)} ml</span></div>`;
+                }
+            });
+
+            // Delta Hb 15%
+            let drop15 = hbInit * 0.15;
+            let abl15 = (ebv * drop15) / hbInit; // Simplifies to ebv * 0.15
+            let hb15 = hbInit - drop15;
+            ablHtml += `<div class="result-row"><span class="result-label">MABL (Delta 15%, Hb ${hb15.toFixed(1)})</span><span class="result-value">${abl15.toFixed(0)} ml</span></div>`;
+
+            // Delta Hb 30%
+            let drop30 = hbInit * 0.30;
+            let abl30 = (ebv * drop30) / hbInit; // Simplifies to ebv * 0.30
+            let hb30 = hbInit - drop30;
+            ablHtml += `<div class="result-row"><span class="result-label">MABL (Delta 30%, Hb ${hb30.toFixed(1)})</span><span class="result-value">${abl30.toFixed(0)} ml</span></div>`;
+        } else {
+            ablHtml = `<div class="result-row"><span class="result-label">MABL</span><span class="result-value">Input Hb Initial</span></div>`;
+        }
+        document.getElementById('ablList').innerHTML = ablHtml;
+
+        let maint = 0;
+        if (weight <= 10) maint = weight * 4;
+        else if (weight <= 20) maint = 40 + (weight - 10) * 2;
+        else maint = 60 + (weight - 20) * 1;
+        
+        document.getElementById('resMaint').innerText = maint.toFixed(0) + " ml/hr";
+
+        let deficit = maint * fasting;
+        let opStress = stress * weight; 
+
+        let kc1 = maint + opStress + (0.5 * deficit);
+        let kc2 = maint + opStress + (0.25 * deficit);
+        let kc4 = maint + opStress;
+
+        document.getElementById('resKC1').innerText = kc1.toFixed(0) + " ml";
+        document.getElementById('resKC2').innerText = kc2.toFixed(0) + " ml";
+        document.getElementById('resKC4').innerText = kc4.toFixed(0) + " ml";
+
+        let meds = [
+            { name: "Midazolam", dose: 0.05, unit: "mg" },
+            { name: "Fentanyl", dose: "1-2", unit: "mcg", isRange: true, min: 1, max: 2 },
+            { name: "Propofol", dose: "1-2", unit: "mg", isRange: true, min: 1, max: 2 },
+            { name: "Atracurium", dose: 0.5, unit: "mg" },
+            { name: "Rocuronium", dose: "0.6-1.2", unit: "mg", isRange: true, min: 0.6, max: 1.2 },
+            { name: "Ketamine", dose: "1-2", unit: "mg", isRange: true, min: 1, max: 2 },
+            { name: "Paracetamol", dose: 15, unit: "mg" },
+            { name: "Dexamethasone", dose: "0.1-0.5", unit: "mg", isRange: true, min: 0.1, max: 0.5 },
+            { name: "Neostigmine", dose: "0.04-0.07", unit: "mg", isRange: true, min: 0.04, max: 0.07 }
+        ];
+
+        let medsHtml = "";
+        meds.forEach(med => {
+            let val = "";
+            if (med.isRange) {
+                let v1 = (med.min * weight);
+                let v2 = (med.max * weight);
+                v1 = v1 < 10 ? v1.toFixed(1) : v1.toFixed(0);
+                v2 = v2 < 10 ? v2.toFixed(1) : v2.toFixed(0);
+                val = `${v1} - ${v2} ${med.unit}`;
+            } else {
+                let v = (med.dose * weight);
+                v = v < 10 ? v.toFixed(1) : v.toFixed(0);
+                val = `${v} ${med.unit}`;
+            }
+            medsHtml += `<div class="result-row"><span class="result-label">${med.name} (${med.dose} ${med.unit}/kg)</span><span class="result-value">${val}</span></div>`;
+        });
+        document.getElementById('medsList').innerHTML = medsHtml;
+
+        let epi = (10 * weight);
+        document.getElementById('resEpi').innerText = epi + " mcg (" + (epi/1000).toFixed(2) + " mg)";
+        
+        let ephMin = (0.1 * weight).toFixed(1);
+        let ephMax = (0.3 * weight).toFixed(1);
+        document.getElementById('resEphedrine').innerText = `${ephMin} - ${ephMax} mg`;
+
+        let atrMin = (0.01 * weight).toFixed(2);
+        let atrMax = (0.02 * weight).toFixed(2);
+        document.getElementById('resAtropine').innerText = `${atrMin} - ${atrMax} mg`;
+
+        document.getElementById('resArmitageLow').innerText = (0.5 * weight).toFixed(1) + " ml";
+        document.getElementById('resArmitageHigh').innerText = (1.0 * weight).toFixed(1) + " ml";
+    }
+</script>
+
+</body>
+</html>
+

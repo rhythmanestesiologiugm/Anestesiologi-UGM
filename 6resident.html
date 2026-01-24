@@ -50,8 +50,14 @@
             outline: none;
         }
 
-        #resident-search-widget .rse-btn {
+        /* Button Group */
+        #resident-search-widget .rse-btn-group {
+            display: flex;
+            gap: 10px;
             margin-top: 0.5rem;
+        }
+
+        #resident-search-widget .rse-btn {
             background-color: #003366;
             color: white;
             border: none;
@@ -59,11 +65,23 @@
             font-size: 1rem;
             border-radius: 4px;
             cursor: pointer;
-            width: 100%;
+            flex: 1;
+            /* Forced CSS */
+            font-family: inherit;
+            font-weight: 700;
+            -webkit-font-smoothing: subpixel-antialiased;
+        }
+
+        #resident-search-widget .rse-btn.secondary {
+            background-color: #27ae60; /* Green for High-Low */
+        }
+
+        #resident-search-widget .rse-btn.tertiary {
+            background-color: #e67e22; /* Orange for Newline */
         }
 
         #resident-search-widget .rse-btn:hover {
-            background-color: #002244;
+            opacity: 0.9;
         }
 
         /* Result String Box */
@@ -77,6 +95,19 @@
             color: #2c3e50;
             word-wrap: break-word;
             display: none; /* Hidden by default */
+            font-size: 0.9rem;
+        }
+
+        /* Newline Output Area */
+        #resident-search-widget .rse-vertical-output {
+            margin-top: 15px;
+            width: 100%;
+            height: 150px;
+            font-family: monospace;
+            padding: 10px;
+            border: 1px solid #bdc3c7;
+            background-color: #f9f9f9;
+            display: none;
         }
 
         #resident-search-widget table {
@@ -122,9 +153,16 @@
         <textarea id="rse-input" placeholder="Example: RI SIP KEV ABE" rows="2"></textarea>
         
         <p class="rse-note">Database: Stase PPDS (Jan-Jul 2026) & Staff Pengajar.</p>
-        <button class="rse-btn" onclick="runResidentSearch()">Search & Sort</button>
+        
+        <div class="rse-btn-group">
+            <button class="rse-btn" onclick="runResidentSearch()">Search (Low→High)</button>
+            <button class="rse-btn secondary" onclick="runHighLowSearch()">Order (High→Low)</button>
+            <button class="rse-btn tertiary" onclick="convertOutputToNewline()">Convert / to Enter</button>
+        </div>
 
         <div id="rse-output-string" class="rse-output-box"></div>
+        
+        <textarea id="rse-vertical-output" class="rse-vertical-output" readonly placeholder="Vertical list output will appear here..."></textarea>
 
         <table id="rse-result-table" style="display:none;">
             <thead>
@@ -278,7 +316,7 @@
             "HNA": { name: "Hananya Dwi Anggi Manurung", level: "R3 (II A)" },
             "AJI": { name: "R. Suseno Aji", level: "R3 (II A)" },
             "VNI": { name: "Vania Valentina", level: "R3 (II A)" },
-            "HAS": { name: "Ihsan Hamdani", level: "R3 (II A)" },
+            "HSA": { name: "Ihsan Hamdani", level: "R3 (II A)" },
             "FUZ": { name: "Ahmad Fauzi", level: "R3 (II A)" },
             "DST": { name: "Adisty Chandra", level: "R3 (II A)" },
             "RAF": { name: "Siti Arafah Nasrullah", level: "R3 (II A)" },
@@ -337,33 +375,23 @@
             "UNKNOWN": 99
         };
 
-        function runResidentSearch() {
+        // Helper to get processed data
+        function getProcessedData() {
             const input = document.getElementById('rse-input').value;
-            const tableBody = document.getElementById('rse-table-body');
-            const resultTable = document.getElementById('rse-result-table');
-            const outputStringBox = document.getElementById('rse-output-string');
-            
-            // Clear previous results
-            tableBody.innerHTML = '';
-            outputStringBox.style.display = 'none';
-            outputStringBox.textContent = '';
             
             if (!input.trim()) {
                 alert("Please enter at least one code.");
-                return;
+                return null;
             }
 
-            // --- 1. Process input: Split by '/', Space, Enter, or Comma ---
-            // Regex /[\/\s\n,]+/ matches forward slash, any whitespace (incl newline), or comma
             const codes = input.split(/[\/\s\n,]+/)
                 .map(code => code.trim().toUpperCase())
                 .filter(code => code.length > 0)
-                .slice(0, 50); // Increased limit slightly in case of copy-paste
+                .slice(0, 50);
 
-            if (codes.length === 0) return;
+            if (codes.length === 0) return null;
 
-            // --- 2. Map codes to data objects including Rank ---
-            const processedData = codes.map(code => {
+            return codes.map(code => {
                 let name, level, rank, styleClass;
                 const resData = RESIDENT_DB[code];
                 const staffData = STAFF_DB[code];
@@ -387,12 +415,26 @@
 
                 return { code, name, level, rank, styleClass };
             });
+        }
 
-            // --- 3. GENERATE OUTPUT STRING (Lowest to Highest Rank) ---
-            // Filter out errors, then sort DESCENDING by Rank Number (9 -> 0) 
-            // because 9 is Lowest Rank (R1) and 0 is Highest Rank (Staff)
+        function runResidentSearch() {
+            const processedData = getProcessedData();
+            if(!processedData) return;
+
+            const tableBody = document.getElementById('rse-table-body');
+            const resultTable = document.getElementById('rse-result-table');
+            const outputStringBox = document.getElementById('rse-output-string');
+            const verticalOutput = document.getElementById('rse-vertical-output');
+            
+            // Clear outputs
+            tableBody.innerHTML = '';
+            outputStringBox.style.display = 'none';
+            verticalOutput.style.display = 'none';
+
+            // --- GENERATE LOW-HIGH STRING (Standard) ---
+            // Descending numeric sort (b - a): 9 -> 0 (Low Rank -> High Rank)
             const sortedForString = [...processedData]
-                .filter(d => d.rank !== 99) // Exclude unknown
+                .filter(d => d.rank !== 99) 
                 .sort((a, b) => b.rank - a.rank); 
             
             if (sortedForString.length > 0) {
@@ -401,25 +443,18 @@
                 outputStringBox.style.display = "block";
             }
 
-            // --- 4. RENDER TABLE (Highest to Lowest Rank - Standard View) ---
-            // Sort Ascending (0 -> 9)
+            // --- RENDER TABLE (Highest to Lowest Rank) ---
+            // Ascending numeric sort (a - b): 0 -> 9 (High Rank -> Low Rank)
             processedData.sort((a, b) => a.rank - b.rank);
 
             processedData.forEach((data, index) => {
                 const row = document.createElement('tr');
-
-                const cellNo = document.createElement('td');
-                cellNo.textContent = index + 1;
                 
-                const cellCode = document.createElement('td');
-                cellCode.textContent = data.code;
-
-                const cellName = document.createElement('td');
-                cellName.textContent = data.name;
+                const cellNo = document.createElement('td'); cellNo.textContent = index + 1;
+                const cellCode = document.createElement('td'); cellCode.textContent = data.code;
+                const cellName = document.createElement('td'); cellName.textContent = data.name;
                 if(data.styleClass === "rse-error") cellName.className = "rse-error";
-
-                const cellLevel = document.createElement('td');
-                cellLevel.textContent = data.level;
+                const cellLevel = document.createElement('td'); cellLevel.textContent = data.level;
                 if(data.styleClass === "rse-staff") cellLevel.className = "rse-staff";
 
                 row.appendChild(cellNo);
@@ -429,8 +464,68 @@
                 tableBody.appendChild(row);
             });
 
-            // Show table
             resultTable.style.display = "table";
+        }
+
+        function runHighLowSearch() {
+            const processedData = getProcessedData();
+            if(!processedData) return;
+            
+            const outputStringBox = document.getElementById('rse-output-string');
+            const verticalOutput = document.getElementById('rse-vertical-output');
+            verticalOutput.style.display = 'none'; // Hide vertical box if open
+
+            // Sort Ascending (a - b): 0 (Staff) -> 9 (R1) -> High to Low Rank
+            const sortedForString = [...processedData]
+                .filter(d => d.rank !== 99) 
+                .sort((a, b) => a.rank - b.rank);
+            
+            if (sortedForString.length > 0) {
+                const resultCodeString = sortedForString.map(d => d.code).join('/');
+                outputStringBox.textContent = "High-Low Rank Order: " + resultCodeString;
+                outputStringBox.style.display = "block";
+                
+                // Update table to reflect this specific order
+                const tableBody = document.getElementById('rse-table-body');
+                const resultTable = document.getElementById('rse-result-table');
+                tableBody.innerHTML = '';
+                
+                sortedForString.forEach((data, index) => {
+                     const row = document.createElement('tr');
+                     const cellNo = document.createElement('td'); cellNo.textContent = index + 1;
+                     const cellCode = document.createElement('td'); cellCode.textContent = data.code;
+                     const cellName = document.createElement('td'); cellName.textContent = data.name;
+                     if(data.styleClass === "rse-staff") cellName.classList.add("rse-staff");
+                     const cellLevel = document.createElement('td'); cellLevel.textContent = data.level;
+                     
+                     row.appendChild(cellNo); row.appendChild(cellCode); row.appendChild(cellName); row.appendChild(cellLevel);
+                     tableBody.appendChild(row);
+                });
+                resultTable.style.display = "table";
+            }
+        }
+
+        function convertOutputToNewline() {
+            const outputStringBox = document.getElementById('rse-output-string');
+            const verticalOutput = document.getElementById('rse-vertical-output');
+            
+            // Get content from the currently displayed result box
+            let text = outputStringBox.textContent;
+            
+            if (!text || outputStringBox.style.display === "none") {
+                alert("Please run a search first to generate a result string.");
+                return;
+            }
+
+            // Remove label prefixes like "Low-High Rank Order: "
+            text = text.replace(/^(Low-High|High-Low) Rank Order:\s*/, '');
+
+            // Convert / to Newline
+            const converted = text.split('/').join('\n');
+
+            verticalOutput.value = converted;
+            verticalOutput.style.display = 'block';
+            verticalOutput.select(); // Auto-select for easy copy
         }
     </script>
 </div>

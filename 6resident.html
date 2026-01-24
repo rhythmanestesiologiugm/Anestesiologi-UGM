@@ -53,6 +53,7 @@
         /* Button Group */
         #resident-search-widget .rse-btn-group {
             display: flex;
+            flex-wrap: wrap;
             gap: 10px;
             margin-top: 0.5rem;
         }
@@ -65,7 +66,7 @@
             font-size: 1rem;
             border-radius: 4px;
             cursor: pointer;
-            flex: 1;
+            flex: 1 1 100%;
             /* Forced CSS */
             font-family: inherit;
             font-weight: 700;
@@ -96,6 +97,7 @@
             word-wrap: break-word;
             display: none; /* Hidden by default */
             font-size: 0.9rem;
+            white-space: pre-wrap; /* Ensure newlines are respected */
         }
 
         /* Newline Output Area */
@@ -431,17 +433,24 @@
             outputStringBox.style.display = 'none';
             verticalOutput.style.display = 'none';
 
-            // --- GENERATE LOW-HIGH STRING (Standard) ---
+            // Split into Found and Not Found
+            const found = processedData.filter(d => d.rank !== 99);
+            const notFound = processedData.filter(d => d.rank === 99);
+
+            // --- GENERATE LOW-HIGH STRING ---
             // Descending numeric sort (b - a): 9 -> 0 (Low Rank -> High Rank)
-            const sortedForString = [...processedData]
-                .filter(d => d.rank !== 99) 
-                .sort((a, b) => b.rank - a.rank); 
+            const sortedForString = [...found].sort((a, b) => b.rank - a.rank);
+
+            outputStringBox.innerHTML =
+                "Low-High Rank Order: " +
+                sortedForString.map(d => d.code).join('/') +
+                (notFound.length > 0
+                    ? '<br><span class="rse-error">' +
+                      notFound.map(d => d.code).join(' ') +
+                      ' NOT FOUND</span>'
+                    : '');
             
-            if (sortedForString.length > 0) {
-                const resultCodeString = sortedForString.map(d => d.code).join('/');
-                outputStringBox.textContent = "Low-High Rank Order: " + resultCodeString;
-                outputStringBox.style.display = "block";
-            }
+            outputStringBox.style.display = "block";
 
             // --- RENDER TABLE (Highest to Lowest Rank) ---
             // Ascending numeric sort (a - b): 0 -> 9 (High Rank -> Low Rank)
@@ -475,34 +484,43 @@
             const verticalOutput = document.getElementById('rse-vertical-output');
             verticalOutput.style.display = 'none'; // Hide vertical box if open
 
-            // Sort Ascending (a - b): 0 (Staff) -> 9 (R1) -> High to Low Rank
-            const sortedForString = [...processedData]
-                .filter(d => d.rank !== 99) 
-                .sort((a, b) => a.rank - b.rank);
+            // Split into Found and Not Found
+            const found = processedData.filter(d => d.rank !== 99);
+            const notFound = processedData.filter(d => d.rank === 99);
+
+            // --- GENERATE HIGH-LOW STRING ---
+            // Ascending numeric sort (a - b): 0 -> 9 (High Rank -> Low Rank)
+            const sortedForString = [...found].sort((a, b) => a.rank - b.rank);
+
+            outputStringBox.innerHTML =
+                "High-Low Rank Order: " +
+                sortedForString.map(d => d.code).join('/') +
+                (notFound.length > 0
+                    ? '<br><span class="rse-error">' +
+                      notFound.map(d => d.code).join(' ') +
+                      ' NOT FOUND</span>'
+                    : '');
             
-            if (sortedForString.length > 0) {
-                const resultCodeString = sortedForString.map(d => d.code).join('/');
-                outputStringBox.textContent = "High-Low Rank Order: " + resultCodeString;
-                outputStringBox.style.display = "block";
+            outputStringBox.style.display = "block";
                 
-                // Update table to reflect this specific order
-                const tableBody = document.getElementById('rse-table-body');
-                const resultTable = document.getElementById('rse-result-table');
-                tableBody.innerHTML = '';
-                
-                sortedForString.forEach((data, index) => {
-                     const row = document.createElement('tr');
-                     const cellNo = document.createElement('td'); cellNo.textContent = index + 1;
-                     const cellCode = document.createElement('td'); cellCode.textContent = data.code;
-                     const cellName = document.createElement('td'); cellName.textContent = data.name;
-                     if(data.styleClass === "rse-staff") cellName.classList.add("rse-staff");
-                     const cellLevel = document.createElement('td'); cellLevel.textContent = data.level;
-                     
-                     row.appendChild(cellNo); row.appendChild(cellCode); row.appendChild(cellName); row.appendChild(cellLevel);
-                     tableBody.appendChild(row);
-                });
-                resultTable.style.display = "table";
-            }
+            // Update table to reflect this specific order
+            const tableBody = document.getElementById('rse-table-body');
+            const resultTable = document.getElementById('rse-result-table');
+            tableBody.innerHTML = '';
+            
+            // Only render valid entries in High-Low table sort context (matching previous logic behavior)
+            sortedForString.forEach((data, index) => {
+                    const row = document.createElement('tr');
+                    const cellNo = document.createElement('td'); cellNo.textContent = index + 1;
+                    const cellCode = document.createElement('td'); cellCode.textContent = data.code;
+                    const cellName = document.createElement('td'); cellName.textContent = data.name;
+                    if(data.styleClass === "rse-staff") cellName.classList.add("rse-staff");
+                    const cellLevel = document.createElement('td'); cellLevel.textContent = data.level;
+                    
+                    row.appendChild(cellNo); row.appendChild(cellCode); row.appendChild(cellName); row.appendChild(cellLevel);
+                    tableBody.appendChild(row);
+            });
+            resultTable.style.display = "table";
         }
 
         function convertOutputToNewline() {

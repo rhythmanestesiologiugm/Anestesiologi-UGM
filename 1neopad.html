@@ -121,12 +121,12 @@
                 </select>
             </div>
             <div class="input-wrapper">
-                <label>Lama Puasa (Jam)</label>
-                <input type="number" id="fasting" value="6" oninput="calculate()">
+                <label>PP (Jam)</label>
+                <input type="number" id="ppHours" value="8" oninput="calculate()">
             </div>
             <div class="input-wrapper">
-                <label>Stress Operasi</label>
-                <select id="stress" onchange="calculate()">
+                <label>REL</label>
+                <select id="relFactor" onchange="calculate()">
                     <option value="2">Noninvasive (2 ml/kg)</option>
                     <option value="4" selected>Mildly invasive (4 ml/kg)</option>
                     <option value="8">Moderately invasive (8 ml/kg)</option>
@@ -134,8 +134,8 @@
                 </select>
             </div>
             <div class="input-wrapper">
-                <label>Hb Awal (g/dL)</label>
-                <input type="number" id="hbInit" step="0.1" placeholder="ex: 12" oninput="calculate()">
+                <label>Hct Awal (%)</label>
+                <input type="number" id="hctInit" step="0.1" placeholder="ex: 36" oninput="calculate()">
             </div>
         </div>
 
@@ -175,18 +175,36 @@
         </div>
 
         <div class="section-header">CAIRAN & DARAH</div>
-        <div class="result-row"><span class="result-label">EBV Factor</span><span id="resEBVFactor" class="result-value">-</span></div>
+        
+        <div class="result-row">
+            <span class="result-label">EBV Factor</span>
+            <span class="result-value">
+                <span id="resEBVFactor">-</span>
+                <div style="display:flex; align-items:center; gap:5px; margin-top:2px;">
+                    <label style="font-size:0.75em; margin:0; display:flex; align-items:center; gap:3px; color:#7f8c8d; font-weight:normal; cursor:pointer;">
+                        <input type="checkbox" id="ebvOverrideToggle" onchange="calculate()">
+                        Manual
+                    </label>
+                    <input type="number" id="ebvOverrideValue"
+                           placeholder="ml/kg"
+                           style="width:50px; padding:2px 4px; font-size:0.85em; border:1px solid #bdc3c7; border-radius:3px; display:none;"
+                           oninput="calculate()">
+                </div>
+            </span>
+        </div>
+
         <div class="result-row"><span class="result-label">EBV (Estimated Blood Vol)</span><span id="resEBV" class="result-value">-</span></div>
         <div class="sub-header" style="width:100%; border-bottom:1px solid #eee; margin-bottom:5px;">MABL (Max Allowable Blood Loss)</div>
         <div id="ablSection"></div>
-        <div style="font-size: 0.75em; color: #7f8c8d; margin-top:5px; text-align:right; width:100%; display:block;">Formula: EBV × (Hb Init - Hb Thr) / Hb Init</div>
+        <div style="font-size: 0.75em; color: #7f8c8d; margin-top:5px; text-align:right; width:100%; display:block;">Formula: EBV × (Hct Init - Hct Thr) / Hct Init</div>
         
         <div class="sub-header">Fluid Management</div>
-        <div class="result-row"><span class="result-label">Maintenance (4-2-1)</span><span id="resMaint" class="result-value">-</span></div>
-        <div class="result-row"><span class="result-label">Replacement (REL)</span><span id="resREL" class="result-value">Sesuai klinis</span></div>
-        <div class="result-row"><span class="result-label">KC 1 (Jam 1: M + O + 1/2 Defisit)</span><span id="resKC1" class="result-value">-</span></div>
-        <div class="result-row"><span class="result-label">KC 2-3 (Jam 2/3: M + O + 1/4 Defisit)</span><span id="resKC2" class="result-value">-</span></div>
-        <div class="result-row"><span class="result-label">KC 4 (Jam 4: M + O)</span><span id="resKC4" class="result-value">-</span></div>
+        <div class="result-row"><span class="result-label">Maintenance (2 cc/kgBW/hr)</span><span id="resMaint" class="result-value">-</span></div>
+        <div class="result-row"><span class="result-label">Replacement (REL)</span><span id="resREL" class="result-value">-</span></div>
+        <div class="result-row"><span class="result-label">PP (Pengganti Puasa)</span><span id="resPP" class="result-value">-</span></div>
+        <div class="result-row"><span class="result-label">KC 1 (Jam 1: M + REL + 1/2 PP)</span><span id="resKC1" class="result-value">-</span></div>
+        <div class="result-row"><span class="result-label">KC 2-3 (Jam 2/3: M + REL + 1/4 PP)</span><span id="resKC2" class="result-value">-</span></div>
+        <div class="result-row"><span class="result-label">KC 4 (Jam 4: M + REL)</span><span id="resKC4" class="result-value">-</span></div>
         
         <div class="section-header">MEDICATION (KALKULATOR INI TIDAK PUNYA UPPER LIMIT)</div>
         <div id="medsList"></div>
@@ -285,9 +303,13 @@
         let weight = parseFloat(document.getElementById('weight').value);
         let height = parseFloat(document.getElementById('height').value);
         let gender = document.getElementById('gender').value;
-        let fasting = parseFloat(document.getElementById('fasting').value) || 0;
-        let stress = parseFloat(document.getElementById('stress').value) || 0;
-        let hbInit = parseFloat(document.getElementById('hbInit').value) || 0;
+        let ppHours = parseFloat(document.getElementById('ppHours').value) || 0;
+        let relFactor = parseFloat(document.getElementById('relFactor').value) || 0;
+        let hctInit = parseFloat(document.getElementById('hctInit').value) || 0;
+
+        // EBV Override Inputs
+        let ebvOverrideOn = document.getElementById('ebvOverrideToggle').checked;
+        let ebvOverrideVal = parseFloat(document.getElementById('ebvOverrideValue').value);
 
         let hasWeight = !isNaN(weight);
         let hasAge = !isNaN(ageY) || !isNaN(ageM);
@@ -399,6 +421,8 @@
             document.getElementById('resEBV').innerText = "-";
             document.getElementById('ablSection').innerHTML = "";
             document.getElementById('resMaint').innerText = "-";
+            document.getElementById('resREL').innerText = "-";
+            document.getElementById('resPP').innerText = "-";
             document.getElementById('resKC1').innerText = "-";
             document.getElementById('resKC2').innerText = "-";
             document.getElementById('resKC4').innerText = "-";
@@ -411,37 +435,59 @@
             return;
         }
 
-        let ebvFactor = 75;
+        // EBV LOGIC WITH OVERRIDE
+        let ebvFactorAuto = 75;
         if (valAgeY === 0 && valAgeM === 0) {
-            ebvFactor = 90;
+            ebvFactorAuto = 90;
         } else if (totalMonths < 1) {
-            ebvFactor = 85; 
+            ebvFactorAuto = 85; 
         } else if (totalMonths < 12) {
-            ebvFactor = 80;
+            ebvFactorAuto = 80;
         } else if (gender === 'female' && totalYears > 12) {
-            ebvFactor = 65;
+            ebvFactorAuto = 65;
         }
         
-        document.getElementById('resEBVFactor').innerText = ebvFactor + " ml/kg";
+        let ebvFactor = ebvFactorAuto;
+        const ebvInput = document.getElementById('ebvOverrideValue');
+        const ebvDisplay = document.getElementById('resEBVFactor');
+
+        if (ebvOverrideOn) {
+            ebvInput.style.display = "inline-block";
+            if (!isNaN(ebvOverrideVal) && ebvOverrideVal > 0) {
+                ebvFactor = ebvOverrideVal;
+            }
+        } else {
+            ebvInput.style.display = "none";
+            ebvInput.value = "";
+        }
+
+        let ebvLabel = ebvOverrideOn ? " ml/kg (Manual)" : " ml/kg (Auto)";
+        ebvDisplay.innerText = ebvFactor + ebvLabel;
+
+        if (ebvOverrideOn && ebvFactor < 50) {
+            ebvDisplay.style.color = "#e74c3c";
+        } else {
+            ebvDisplay.style.color = "";
+        }
 
         let ebv = weight * ebvFactor;
         document.getElementById('resEBV').innerText = ebv.toFixed(0) + " ml";
         
         // ABL Calculation Loop
         let ablHtml = "";
-        if (hbInit > 0) {
+        if (hctInit > 0) {
             const ablTargets = [
-                { hb: 10, label: "Hb 10 = 30% hct" },
-                { hb: 9, label: "Hb 9 = 27% hct" },
-                { hb: 8, label: "Hb 8 = 24% hct" },
-                { hb: 7, label: "Hb 7 = 21% hct" },
-                { hb: 6, label: "Hb 6 = 18% hct" }
+                { hct: 30, label: "Hb 10 = 30% hct" },
+                { hct: 27, label: "Hb 9 = 27% hct" },
+                { hct: 24, label: "Hb 8 = 24% hct" },
+                { hct: 21, label: "Hb 7 = 21% hct" },
+                { hct: 18, label: "Hb 6 = 18% hct" }
             ];
 
             ablTargets.forEach(t => {
                 let val = 0;
-                if (hbInit > t.hb) {
-                    val = (ebv * (hbInit - t.hb)) / hbInit;
+                if (hctInit > t.hct) {
+                    val = (ebv * (hctInit - t.hct)) / hctInit;
                     ablHtml += `<div class="result-row"><span class="result-label">${t.label}</span><span class="result-value">${val.toFixed(0)} ml</span></div>`;
                 } else {
                      ablHtml += `<div class="result-row"><span class="result-label">${t.label}</span><span class="result-value">-</span></div>`;
@@ -456,23 +502,23 @@
             ablHtml += `<div class="result-row"><span class="result-label">Delta Hb or hct 30%</span><span class="result-value">${d30.toFixed(0)} ml</span></div>`;
             
         } else {
-            ablHtml = `<div class="result-row" style="color:#e67e22; justify-content:center; text-align:center;">Masukkan Hb Awal</div>`;
+            ablHtml = `<div class="result-row" style="color:#e67e22; justify-content:center; text-align:center;">Masukkan Hct Awal</div>`;
         }
         document.getElementById('ablSection').innerHTML = ablHtml;
 
-        let maint = 0;
-        if (weight <= 10) maint = weight * 4;
-        else if (weight <= 20) maint = 40 + (weight - 10) * 2;
-        else maint = 60 + (weight - 20) * 1;
+        let maint = 2 * weight;
         
         document.getElementById('resMaint').innerText = maint.toFixed(0) + " ml/hr";
 
-        let deficit = maint * fasting;
-        let opStress = stress * weight; 
+        let pp = maint * ppHours;
+        let rel = relFactor * weight; 
+        
+        document.getElementById('resREL').innerText = rel.toFixed(0) + " ml/hr";
+        document.getElementById('resPP').innerText = pp.toFixed(0) + " ml";
 
-        let kc1 = maint + opStress + (0.5 * deficit);
-        let kc2 = maint + opStress + (0.25 * deficit);
-        let kc4 = maint + opStress;
+        let kc1 = maint + rel + (0.5 * pp);
+        let kc2 = maint + rel + (0.25 * pp);
+        let kc4 = maint + rel;
 
         document.getElementById('resKC1').innerText = kc1.toFixed(0) + " ml";
         document.getElementById('resKC2').innerText = kc2.toFixed(0) + " ml";

@@ -101,6 +101,32 @@
         }
         .bp-btn:hover { background-color: #2980b9; }
 
+        /* New Hypotension Styles */
+        .hypo-box {
+            background: #fff8e1;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            border: 1px solid #ffe0b2;
+            color: #4e342e;
+            font-size: 0.9em;
+        }
+        .hypo-list {
+            margin: 5px 0 10px 0;
+            padding-left: 20px;
+        }
+        .hypo-calc-result {
+            font-weight: bold;
+            color: #d35400;
+            font-size: 1.1em;
+        }
+        .hypo-footnote {
+            font-size: 50%;
+            opacity: 0.5;
+            margin-top: 5px;
+            line-height: 1.2;
+        }
+
         .manual-toggle-group {
             display:flex; 
             align-items:center; 
@@ -208,6 +234,24 @@
 
         <div class="section-header">HEMODINAMIK & RESPIRASI</div>
         <a href="https://bsolomon.us/app/pediatric-bp/" target="_blank" class="bp-btn">BP CALCULATOR FOR PEDIATRICS</a>
+        
+        <div class="hypo-box">
+            <strong>Hypotension Definition (Systolic BP):</strong>
+            <ul class="hypo-list">
+                <li>&lt;60 mm Hg: Term neonates (0 to 28 days)</li>
+                <li>&lt;70 mm Hg: Infants (1 month to 12 months)</li>
+                <li>&lt;70 mm Hg + (2 × age in years): Children 1 to 10 years</li>
+                <li>&lt;90 mm Hg: Children ≥10 years of age</li>
+            </ul>
+            <div style="border-top: 1px dashed #ccc; padding-top: 5px; margin-top: 5px;">
+                Patient Minimum SBP: <span id="resMinSBP" class="hypo-calc-result">-</span>
+            </div>
+            <div class="hypo-footnote">
+                <a href="https://doi.org/10.1161/CIRCULATIONAHA.110.971101" target="_blank" style="color: inherit; text-decoration: none;">
+                    https://doi.org/10.1161/CIRCULATIONAHA.110.971101
+                </a>
+            </div>
+        </div>
         
         <div class="grid-2">
             <div class="result-row"><span class="result-label">Heart Rate (HR)</span><span id="resHR" class="result-value">-</span></div>
@@ -401,6 +445,30 @@
 
         let estWDisplay = getWeightRange(gender, totalMonths);
         document.getElementById('resEstWeight').innerText = estWDisplay;
+
+        // --- HYPOTENSION CALCULATOR LOGIC ---
+        let minSBP = "-";
+        // Rules:
+        // <60: Term neonates (0-28 days approx <1 month)
+        // <70: Infants (1-12 months)
+        // <70 + 2*age: Children 1-10 years
+        // <90: Children >= 10 years
+        
+        if (hasAge) {
+            if (totalMonths < 1) {
+                minSBP = "< 60 mm Hg";
+            } else if (totalMonths <= 12) {
+                minSBP = "< 70 mm Hg";
+            } else if (valAgeY >= 1 && valAgeY < 10) {
+                // Formula: 70 + (2 * age in years)
+                let calc = 70 + (2 * valAgeY);
+                minSBP = `< ${calc.toFixed(0)} mm Hg`;
+            } else if (valAgeY >= 10) {
+                minSBP = "< 90 mm Hg";
+            }
+        }
+        document.getElementById('resMinSBP').innerText = minSBP;
+        // -------------------------------------
 
         let pbw = 0;
         if (height > 0) {
@@ -690,5 +758,5 @@
 </script>
 
 </body>
-</html>
+</html>```
 

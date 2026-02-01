@@ -101,6 +101,31 @@
         }
         .bp-btn:hover { background-color: #2980b9; }
 
+        .manual-toggle-group {
+            display:flex; 
+            align-items:center; 
+            gap:5px; 
+            margin-top:2px;
+        }
+        .manual-label {
+            font-size:0.75em; 
+            margin:0; 
+            display:flex; 
+            align-items:center; 
+            gap:3px; 
+            color:#7f8c8d; 
+            font-weight:normal; 
+            cursor:pointer;
+        }
+        .manual-input {
+            width:50px; 
+            padding:2px 4px; 
+            font-size:0.85em; 
+            border:1px solid #bdc3c7; 
+            border-radius:3px; 
+            display:none;
+        }
+
         @media (max-width: 600px) {
             .grid-2 { grid-template-columns: 1fr; }
         }
@@ -187,9 +212,29 @@
         <div class="grid-2">
             <div class="result-row"><span class="result-label">Heart Rate (HR)</span><span id="resHR" class="result-value">-</span></div>
             <div class="result-row"><span class="result-label">Resp. Rate (RR)</span><span id="resRR" class="result-value">-</span></div>
-            <div class="result-row"><span class="result-label">Tidal Volume (VT)</span><span id="resVT" class="result-value">-</span></div>
-            <div class="result-row"><span class="result-label">Minute Vol (MV)</span><span id="resMV" class="result-value">-</span></div>
         </div>
+
+        <div class="result-row"><span class="result-label">Tidal Volume (VT)</span><span id="resVT" class="result-value">-</span></div>
+
+        <div class="result-row">
+            <span class="result-label">MV Factor (ml/kg/min)</span>
+            <span class="result-value">
+                <span id="resMVFactor">-</span>
+                <div class="manual-toggle-group">
+                    <label class="manual-label">
+                        <input type="checkbox" id="mvOverrideToggle" onchange="calculate()">
+                        Manual
+                    </label>
+                    <input type="number" id="mvOverrideValue"
+                           class="manual-input"
+                           placeholder="ml/kg"
+                           oninput="calculate()">
+                </div>
+            </span>
+        </div>
+        
+        <div class="result-row"><span class="result-label">Minute Vol Total (MV)</span><span id="resMV" class="result-value">-</span></div>
+
 
         <div class="section-header">CAIRAN & DARAH</div>
         
@@ -197,14 +242,14 @@
             <span class="result-label">EBV Factor</span>
             <span class="result-value">
                 <span id="resEBVFactor">-</span>
-                <div style="display:flex; align-items:center; gap:5px; margin-top:2px;">
-                    <label style="font-size:0.75em; margin:0; display:flex; align-items:center; gap:3px; color:#7f8c8d; font-weight:normal; cursor:pointer;">
+                <div class="manual-toggle-group">
+                    <label class="manual-label">
                         <input type="checkbox" id="ebvOverrideToggle" onchange="calculate()">
                         Manual
                     </label>
                     <input type="number" id="ebvOverrideValue"
+                           class="manual-input"
                            placeholder="ml/kg"
-                           style="width:50px; padding:2px 4px; font-size:0.85em; border:1px solid #bdc3c7; border-radius:3px; display:none;"
                            oninput="calculate()">
                 </div>
             </span>
@@ -341,6 +386,10 @@
         // EBV Override Inputs
         let ebvOverrideOn = document.getElementById('ebvOverrideToggle').checked;
         let ebvOverrideVal = parseFloat(document.getElementById('ebvOverrideValue').value);
+        
+        // MV Override Inputs
+        let mvOverrideOn = document.getElementById('mvOverrideToggle').checked;
+        let mvOverrideVal = parseFloat(document.getElementById('mvOverrideValue').value);
 
         let hasWeight = !isNaN(weight);
         let hasAge = !isNaN(ageY) || !isNaN(ageM);
@@ -422,8 +471,6 @@
 
         if (hasWeight) {
             vt = (6 * weight).toFixed(0) + " - " + (8 * weight).toFixed(0) + " ml";
-            let mvCalc = 100 * weight; 
-            mv = mvCalc.toFixed(0) + " cc/min";
         }
 
         if (totalMonths < 1) { 
@@ -441,10 +488,52 @@
         }
 
         document.getElementById('resHR').innerText = hr;
-        // BP Calc Removed from JS logic as requested, replaced by external link button
         document.getElementById('resRR').innerText = rr;
         document.getElementById('resVT').innerText = vt;
-        document.getElementById('resMV').innerText = mv;
+        
+        // --- Minute Volume Logic ---
+        let mvMin = 0; 
+        let mvMax = 0;
+        
+        // Default factors
+        if (totalMonths <= 1) {
+            mvMin = 250; mvMax = 250;
+        } else if (totalYears <= 16) {
+            mvMin = 100; mvMax = 200;
+        } else {
+            mvMin = 80; mvMax = 100;
+        }
+
+        // Check Override
+        const mvInput = document.getElementById('mvOverrideValue');
+        const mvFactorDisplay = document.getElementById('resMVFactor');
+        
+        if (mvOverrideOn) {
+            mvInput.style.display = "inline-block";
+            if (!isNaN(mvOverrideVal) && mvOverrideVal > 0) {
+                mvMin = mvOverrideVal;
+                mvMax = mvOverrideVal;
+            }
+        } else {
+            mvInput.style.display = "none";
+            mvInput.value = "";
+        }
+
+        let mvFactorText = (mvMin === mvMax) ? `${mvMin}` : `${mvMin} - ${mvMax}`;
+        mvFactorDisplay.innerText = mvFactorText + (mvOverrideOn ? " (Manual)" : "");
+        if(mvOverrideOn) mvFactorDisplay.style.color = "#e74c3c";
+        else mvFactorDisplay.style.color = "";
+
+        if (hasWeight) {
+            let totalMvMin = (mvMin * weight).toFixed(0);
+            let totalMvMax = (mvMax * weight).toFixed(0);
+            let totalMvText = (totalMvMin === totalMvMax) ? `${totalMvMin} ml/min` : `${totalMvMin} - ${totalMvMax} ml/min`;
+            document.getElementById('resMV').innerText = totalMvText;
+        } else {
+            document.getElementById('resMV').innerText = "-";
+        }
+        // --- End MV Logic ---
+
 
         if (!hasWeight) {
             document.getElementById('resEBVFactor').innerText = "-";
